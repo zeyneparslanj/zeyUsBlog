@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Zey'Us | Profesyonel Geliştirici Bloğu</title>
+    <title>Zey'US | Profesyonel Geliştirici Bloğu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -31,6 +31,15 @@
                 bg: '#0f172a',
                 card: '#1e293b',
                 text: '#f1f5f9'
+              }
+            },
+            animation: {
+              'fadeIn': 'fadeIn 0.5s ease-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
               }
             }
           },
@@ -80,13 +89,14 @@
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
     "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.10.1",
     "react-syntax-highlighter/": "https://aistudiocdn.com/react-syntax-highlighter@^16.1.0/",
-    "react-syntax-highlighter": "https://aistudiocdn.com/react-syntax-highlighter@^16.1.0"
+    "react-syntax-highlighter": "https://aistudiocdn.com/react-syntax-highlighter@^16.1.0",
+    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@2.39.3"
   }
 }
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-gray-50 text-gray-900 dark:bg-dark-bg dark:text-dark-text transition-colors duration-300">
+  <body class="bg-gray-50 text-gray-900 dark:bg-dark-bg dark:text-dark-text transition-colors duration-300 antialiased selection:bg-primary-200 selection:text-primary-900 dark:selection:bg-primary-900 dark:selection:text-primary-100">
     <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

@@ -1,148 +1,152 @@
-import { BlogPost, PostCategory } from '../types';
 
-const STORAGE_KEY = 'zeyus_posts';
-const PROFILE_KEY = 'zeyus_profile';
+import { BlogPost, PostCategory, Subscriber } from '../types';
+import { supabase } from './supabaseClient';
+import { posts as samplePosts } from '../data/blogPosts';
 
-// Initial Seed Data
-const INITIAL_POSTS: BlogPost[] = [
-  {
-    id: '1',
-    title: 'Modern Frontend Mimarisi: Komponent Tabanlı Düşünmek',
-    slug: 'modern-frontend-mimarisi',
-    excerpt: 'React ve modern frameworkler ile ölçeklenebilir uygulamalar geliştirirken dikkat edilmesi gereken tasarım desenleri.',
-    content: `
-# Modern Frontend Mimarisi
-
-Frontend dünyası son yıllarda büyük bir değişim geçirdi. JQuery günlerinden bugünün SPA (Single Page Application) dünyasına geçiş, sadece araçlarımızı değil, düşünce yapımızı da değiştirdi.
-
-## Atomik Tasarım Nedir?
-
-Atomik tasarım, Brad Frost tarafından ortaya atılan, kullanıcı arayüzlerini en küçük yapı taşlarından (atomlar) başlayarak karmaşık yapılara (sayfalar) doğru inşa etmeyi öneren bir metodolojidir.
-
-\`\`\`typescript
-// Örnek bir Atomik Bileşen (Button)
-interface ButtonProps {
-  variant: 'primary' | 'secondary';
-  children: React.ReactNode;
-}
-
-const Button: React.FC<ButtonProps> = ({ variant, children }) => {
-  const baseClass = "px-4 py-2 rounded font-medium transition";
-  const variants = {
-    primary: "bg-blue-600 text-white hover:bg-blue-700",
-    secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300"
-  };
-  
-  return <button className={\`\${baseClass} \${variants[variant]}\`}>{children}</button>;
-}
-\`\`\`
-
-## Neden TypeScript?
-
-Büyük ekiplerde çalışırken tip güvenliği bir lüks değil, bir ihtiyaçtır.
-    `,
-    coverImage: 'https://picsum.photos/800/400?random=1',
-    category: PostCategory.ARTICLE,
-    tags: ['React', 'Architecture', 'TypeScript'],
-    publishedAt: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
-    updatedAt: new Date().toISOString(),
-    isFeatured: true,
-    readingTimeMinutes: 5
-  },
-  {
-    id: '2',
-    title: 'DevLog #1: Blog Sistemini Yeniden Yazıyorum',
-    slug: 'devlog-1-blog-sistemini-yeniden-yaziyorum',
-    excerpt: 'Bu hafta sonu kişisel blog sitemi Next.js ve Tailwind CSS kullanarak sıfırdan inşa etmeye başladım.',
-    content: `
-# Yeni Başlangıçlar
-
-Uzun zamandır aklımda olan projeyi nihayet hayata geçiriyorum. Eski WordPress sitem hantal ve yönetimi zordu.
-
-## Teknoloji Yığını
-
-- **React 18**: En güncel özellikler için.
-- **Tailwind CSS**: Hızlı stil geliştirme.
-- **Gemini API**: İçerik üretimine yardımcı olması için.
-
-Beni takipte kalın!
-    `,
-    coverImage: 'https://picsum.photos/800/400?random=2',
-    category: PostCategory.DEVLOG,
-    tags: ['Personal', 'DevLog', 'Refactor'],
-    publishedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-    updatedAt: new Date().toISOString(),
-    isFeatured: false,
-    readingTimeMinutes: 2
-  },
-  {
-    id: '3',
-    title: 'Proje: AI Tabanlı Kod Asistanı',
-    slug: 'proje-ai-kod-asistani',
-    excerpt: 'Gemini API kullanarak geliştirdiğim VS Code eklentisi hakkında teknik detaylar.',
-    content: `
-# AI Kod Asistanı
-
-Yapay zeka araçlarının gelişimi ile birlikte, geliştirici deneyimini (DX) iyileştirmek için yeni fırsatlar doğdu.
-
-## Nasıl Çalışır?
-
-Eklenti, seçili kodu alıp Gemini API'ye gönderiyor ve optimizasyon önerileri istiyor.
-
-> "Gelecek, kod yazmayı bıraktığımız değil, daha akıllı kod yazdığımız bir yer olacak."
-
-### Zorluklar
-
-1. **Latency**: API yanıt süreleri.
-2. **Context**: Kodun bağlamını modele doğru aktarmak.
-
-Projeye GitHub üzerinden erişebilirsiniz.
-    `,
-    coverImage: 'https://picsum.photos/800/400?random=3',
-    category: PostCategory.PROJECT,
-    tags: ['AI', 'Gemini', 'VS Code'],
-    publishedAt: new Date(Date.now() - 86400000 * 10).toISOString(),
-    updatedAt: new Date().toISOString(),
-    isFeatured: true,
-    readingTimeMinutes: 8
-  }
-];
+const mapPostFromDB = (data: any): BlogPost => ({
+  id: data.id,
+  title: data.title,
+  slug: data.slug,
+  summary: data.summary,
+  content: data.content,
+  image: data.image,
+  date: data.created_at || data.date || new Date().toISOString(),
+  category: (data.category as PostCategory) || PostCategory.ARTICLE,
+  tags: Array.isArray(data.tags) ? data.tags : [],
+  updatedAt: data.updated_at || new Date().toISOString(),
+  isFeatured: !!data.is_featured,
+  readingTimeMinutes: data.reading_time_minutes || 0
+});
 
 export const StorageService = {
-  getPosts: (): BlogPost[] => {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_POSTS));
-      return INITIAL_POSTS;
+  testConnection: async (): Promise<boolean> => {
+      try {
+          const { error } = await supabase.from('posts').select('id').limit(1);
+          return !error;
+      } catch (e) {
+          return false;
+      }
+  },
+
+  getPosts: async (): Promise<BlogPost[]> => {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Veri çekme hatası:", error.message);
+        return [];
     }
-    return JSON.parse(data);
+    if (!data) return [];
+    return data.map(mapPostFromDB);
   },
 
-  getPostBySlug: (slug: string): BlogPost | undefined => {
-    const posts = StorageService.getPosts();
-    return posts.find(p => p.slug === slug);
+  getPostBySlug: async (slug: string): Promise<BlogPost | undefined> => {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (error || !data) return undefined;
+    return mapPostFromDB(data);
   },
 
-  savePost: (post: BlogPost): void => {
-    const posts = StorageService.getPosts();
-    const existingIndex = posts.findIndex(p => p.id === post.id);
-    
-    if (existingIndex >= 0) {
-      posts[existingIndex] = post;
-    } else {
-      posts.unshift(post);
+  savePost: async (post: BlogPost): Promise<void> => {
+    const dbPost = {
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      summary: post.summary,
+      content: post.content,
+      image: post.image,
+      created_at: post.date,
+      category: post.category,
+      tags: post.tags,
+      updated_at: new Date().toISOString(),
+      is_featured: post.isFeatured,
+      reading_time_minutes: post.readingTimeMinutes
+    };
+
+    const { error } = await supabase.from('posts').upsert(dbPost, { onConflict: 'id' });
+    if (error) throw error;
+  },
+
+  deletePost: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('posts').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  deleteAllData: async (): Promise<void> => {
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000'); 
+
+    if (error) {
+        throw error;
     }
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
   },
 
-  deletePost: (id: string): void => {
-    const posts = StorageService.getPosts();
-    const newPosts = posts.filter(p => p.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newPosts));
+  // --- SUBSCRIBER METHODS ---
+
+  addSubscriber: async (email: string): Promise<void> => {
+    // E-posta format kontrolü
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        throw new Error("Geçersiz e-posta adresi.");
+    }
+
+    const { error } = await supabase
+        .from('subscribers')
+        .insert([{ email }]);
+    
+    // Eğer duplicate key hatası varsa (zaten kayıtlıysa) hata fırlatma, başarılı say
+    if (error && error.code !== '23505') { 
+        throw error;
+    }
+  },
+
+  getSubscribers: async (): Promise<Subscriber[]> => {
+    const { data, error } = await supabase
+        .from('subscribers')
+        .select('*')
+        .order('created_at', { ascending: false });
+    
+    if (error) {
+        console.error("Aboneler çekilemedi (Tablo yok olabilir):", error);
+        return [];
+    }
+    return data as Subscriber[];
+  },
+
+  seedData: async (): Promise<void> => {
+    const dbPosts = samplePosts.map(post => ({
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      summary: post.summary,
+      content: post.content,
+      image: post.image,
+      created_at: post.date,
+      category: post.category,
+      tags: post.tags,
+      updated_at: post.updatedAt,
+      is_featured: post.isFeatured,
+      reading_time_minutes: post.readingTimeMinutes
+    }));
+
+    const { error } = await supabase.from('posts').upsert(dbPosts, { onConflict: 'id' });
+    
+    if (error) {
+       console.error("Seed Insert Error:", error);
+       throw error;
+    }
   },
 
   calculateReadingTime: (text: string): number => {
+    if (!text) return 0;
     const wpm = 200;
     const words = text.trim().split(/\s+/).length;
     return Math.ceil(words / wpm);

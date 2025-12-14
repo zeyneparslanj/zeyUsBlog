@@ -1,3 +1,4 @@
+
 export enum PostCategory {
   DEVLOG = 'DevLog',
   ARTICLE = 'Makale',
@@ -8,15 +9,21 @@ export interface BlogPost {
   id: string;
   title: string;
   slug: string;
-  excerpt: string;
-  content: string; // Markdown content
-  coverImage?: string;
+  summary: string;
+  content: string;
+  image?: string;
+  date: string;
   category: PostCategory;
   tags: string[];
-  publishedAt: string; // ISO Date string
   updatedAt: string;
   isFeatured: boolean;
   readingTimeMinutes: number;
+}
+
+export interface Subscriber {
+  id: string;
+  email: string;
+  created_at: string;
 }
 
 export interface UserProfile {

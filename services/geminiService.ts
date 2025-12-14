@@ -42,5 +42,26 @@ export const GeminiService = {
       console.error("Gemini Error:", error);
       throw error;
     }
+  },
+
+  suggestTags: async (content: string): Promise<string[]> => {
+    if (!ai) throw new Error("API Key eksik.");
+
+    try {
+      const model = 'gemini-2.5-flash';
+      const prompt = `Aşağıdaki blog yazısı içeriğini analiz et ve en alakalı 5 ila 8 adet SEO uyumlu etiket (keyword) öner. Yanıtı SADECE virgülle ayrılmış kelimeler olarak ver, başka hiçbir açıklama yazma (Örnek: React, Web Development, Frontend).\n\nİçerik:\n${content.substring(0, 5000)}`;
+
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt,
+      });
+
+      const text = response.text || '';
+      // Virgülle ayrılmış stringi diziye çevir ve temizle
+      return text.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    } catch (error) {
+      console.error("Gemini Error (Tags):", error);
+      throw error;
+    }
   }
 };

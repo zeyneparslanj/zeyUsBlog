@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BlogPost, PostCategory } from '../types';
@@ -9,13 +10,22 @@ export const BlogList: React.FC = () => {
   const [filteredPosts, setFilteredPosts] = useState<BlogPost[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('Tümü');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const allPosts = StorageService.getPosts();
-    // Sort desc date
-    allPosts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-    setPosts(allPosts);
-    setFilteredPosts(allPosts);
+    const fetchPosts = async () => {
+      setIsLoading(true);
+      try {
+        const allPosts = await StorageService.getPosts();
+        setPosts(allPosts);
+        setFilteredPosts(allPosts);
+      } catch (error) {
+        console.error("Error loading posts:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPosts();
   }, []);
 
   useEffect(() => {
@@ -31,7 +41,7 @@ export const BlogList: React.FC = () => {
       const q = searchQuery.toLowerCase();
       result = result.filter(p => 
         p.title.toLowerCase().includes(q) || 
-        p.excerpt.toLowerCase().includes(q) ||
+        p.summary.toLowerCase().includes(q) ||
         p.tags.some(t => t.toLowerCase().includes(q))
       );
     }
@@ -40,6 +50,14 @@ export const BlogList: React.FC = () => {
   }, [activeCategory, searchQuery, posts]);
 
   const categories = ['Tümü', ...Object.values(PostCategory)];
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -51,9 +69,9 @@ export const BlogList: React.FC = () => {
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 md:gap-4">
         {/* Categories */}
-        <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+        <div className="flex flex-wrap gap-2 justify-center md:justify-start w-full md:w-auto">
           {categories.map(cat => (
             <button
               key={cat}
@@ -79,7 +97,7 @@ export const BlogList: React.FC = () => {
             placeholder="Ara..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg leading-5 bg-white dark:bg-dark-card text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition duration-150 ease-in-out"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg leading-5 bg-white dark:bg-dark-card text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm transition duration-150 ease-in-out"
           />
         </div>
       </div>
@@ -93,7 +111,13 @@ export const BlogList: React.FC = () => {
             className="flex flex-col bg-white dark:bg-dark-card rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 dark:border-gray-800 overflow-hidden group"
           >
              <div className="h-48 overflow-hidden bg-gray-200 dark:bg-gray-800">
-               <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+               <img 
+                 src={post.image} 
+                 alt={post.title} 
+                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                 loading="lazy"
+                 decoding="async"
+               />
              </div>
              <div className="p-6 flex-1 flex flex-col">
                 <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-3">
@@ -104,10 +128,10 @@ export const BlogList: React.FC = () => {
                   {post.title}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3 mb-4 flex-1">
-                  {post.excerpt}
+                  {post.summary}
                 </p>
                 <div className="text-sm text-gray-400 pt-4 border-t border-gray-100 dark:border-gray-700">
-                  {new Date(post.publishedAt).toLocaleDateString('tr-TR')}
+                  {new Date(post.date).toLocaleDateString('tr-TR')}
                 </div>
              </div>
           </Link>
