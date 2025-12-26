@@ -104,7 +104,7 @@ export const Home: React.FC = () => {
     <div className="space-y-16 md:space-y-24 pb-20">
       <Seo 
         title="Ana Sayfa" 
-        description="Kodlayan zihinler için dijital bahçe. Web teknolojileri, yapay zeka ve veri bilimi üzerine profesyonel notlar." 
+        description="Zeynep'in dijital bahçesi. Web teknolojileri, yapay zeka ve veri bilimi üzerine profesyonel notlar. Ve biraz da kahve, Zey'ce notlar tabii ki." 
       />
       
       {/* Hero Section */}
